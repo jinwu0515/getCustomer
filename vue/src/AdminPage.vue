@@ -3,9 +3,12 @@ import { computed, onMounted, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
 import {
   clearAdminToken,
+  fetchAiFollowUpScripts,
   fetchLeads,
+  generateFollowUpScript,
   getAdminToken,
   loginAdmin,
+  regenerateAiFollowUpScript,
   setAdminToken,
   updateLeadFollowStatus,
 } from "./api.js";
@@ -23,10 +26,22 @@ const loginRules = {
 const isLoggedIn = ref(Boolean(getAdminToken()));
 const isLoggingIn = ref(false);
 const isLoadingLeads = ref(false);
+const isLoadingAiScripts = ref(false);
+const isGeneratingAiScript = ref(false);
+const regeneratingScriptId = ref(null);
 const leads = ref([]);
+const aiScripts = ref([]);
+const activeAdminView = ref("leads");
 const activeFollowStatus = ref("全部");
+const aiDialogVisible = ref(false);
+const aiDialogLead = ref(null);
+const aiScriptContent = ref("");
 
 const followStatusOptions = ["待跟进", "已联系", "已成交", "暂不考虑"];
+const adminViews = [
+  { key: "leads", label: "线索管理" },
+  { key: "scripts", label: "AI 话术库" },
+];
 const followStatusFilters = computed(() => ["全部", ...followStatusOptions]);
 const highIntentCount = computed(() => leads.value.filter((lead) => lead.intentLevel === "高意向").length);
 const statusCounts = computed(() => {
@@ -61,7 +76,7 @@ async function handleLogin() {
     setAdminToken(result.token);
     isLoggedIn.value = true;
     ElMessage.success("登录成功");
-    await loadLeads();
+    await loadAdminData();
   } catch (error) {
     ElMessage.error(error.status === 401 ? "账号或密码错误" : error.message || "登录失败");
   } finally {
@@ -73,6 +88,7 @@ function logout() {
   clearAdminToken();
   isLoggedIn.value = false;
   leads.value = [];
+  aiScripts.value = [];
 }
 
 async function loadLeads() {
@@ -86,13 +102,35 @@ async function loadLeads() {
   } catch (error) {
     if (error.status === 401) {
       logout();
-      ElMessage.warning("登录已失效，请重新登录");
     } else {
       ElMessage.error(error.message || "读取线索失败");
     }
   } finally {
     isLoadingLeads.value = false;
   }
+}
+
+async function loadAiScripts() {
+  if (!isLoggedIn.value) {
+    return;
+  }
+
+  isLoadingAiScripts.value = true;
+  try {
+    aiScripts.value = await fetchAiFollowUpScripts();
+  } catch (error) {
+    if (error.status === 401) {
+      logout();
+    } else {
+      ElMessage.error(error.message || "读取 AI 话术失败");
+    }
+  } finally {
+    isLoadingAiScripts.value = false;
+  }
+}
+
+async function loadAdminData() {
+  await Promise.all([loadLeads(), loadAiScripts()]);
 }
 
 async function changeFollowStatus(lead) {
@@ -109,13 +147,64 @@ async function changeFollowStatus(lead) {
   }
 }
 
+async function openAiScriptDialog(lead) {
+  aiDialogLead.value = lead;
+  aiScriptContent.value = "";
+  aiDialogVisible.value = true;
+  isGeneratingAiScript.value = true;
+
+  try {
+    const result = await generateFollowUpScript(lead);
+    aiScriptContent.value = result?.content || "";
+    await loadAiScripts();
+  } catch (error) {
+    ElMessage.error(error.message || "AI 话术生成失败");
+    aiDialogVisible.value = false;
+  } finally {
+    isGeneratingAiScript.value = false;
+  }
+}
+
+function openSavedAiScriptDialog(script) {
+  aiDialogLead.value = { serviceName: script.serviceName };
+  aiScriptContent.value = script.content || "";
+  aiDialogVisible.value = true;
+  isGeneratingAiScript.value = false;
+}
+
+async function regenerateSavedAiScript(script) {
+  regeneratingScriptId.value = script.id;
+
+  try {
+    const updatedScript = await regenerateAiFollowUpScript(script.id);
+    const index = aiScripts.value.findIndex((item) => item.id === updatedScript.id);
+    if (index >= 0) {
+      aiScripts.value[index] = updatedScript;
+    }
+    await loadAiScripts();
+    openSavedAiScriptDialog(updatedScript);
+    ElMessage.success("AI 话术已重新生成");
+  } catch (error) {
+    ElMessage.error(error.message || "重新生成 AI 话术失败");
+  } finally {
+    regeneratingScriptId.value = null;
+  }
+}
+
+async function switchAdminView(view) {
+  activeAdminView.value = view;
+  if (view === "scripts" && aiScripts.value.length === 0) {
+    await loadAiScripts();
+  }
+}
+
 function levelType(level) {
   if (level === "高意向") return "success";
   if (level === "可跟进") return "warning";
   return "info";
 }
 
-onMounted(loadLeads);
+onMounted(loadAdminData);
 </script>
 
 <template>
@@ -125,7 +214,7 @@ onMounted(loadLeads);
         <a class="login-brand" href="/">
           <span class="brand-mark">AI</span>
           <span>
-            <strong>悦颜获客助手</strong>
+            <strong>萤火获客系统</strong>
             <small>线索管理后台</small>
           </span>
         </a>
@@ -190,15 +279,32 @@ onMounted(loadLeads);
       <header class="admin-header">
         <div>
           <p class="eyebrow">后台管理</p>
-          <h1>用户填写数据表</h1>
-          <p class="muted">只展示 lead_consultations 表中的核心字段。</p>
         </div>
         <div class="admin-actions">
-          <el-button type="primary" :loading="isLoadingLeads" @click="loadLeads">刷新数据</el-button>
+          <el-button
+            type="primary"
+            :loading="activeAdminView === 'scripts' ? isLoadingAiScripts : isLoadingLeads"
+            @click="activeAdminView === 'scripts' ? loadAiScripts() : loadLeads()"
+          >
+            刷新数据
+          </el-button>
           <el-button @click="logout">退出登录</el-button>
           <a class="admin-home-link" href="/">返回前台</a>
         </div>
       </header>
+
+      <div class="admin-view-tabs" aria-label="后台视图切换">
+        <button
+          v-for="view in adminViews"
+          :key="view.key"
+          class="admin-view-tab"
+          :class="{ active: activeAdminView === view.key }"
+          type="button"
+          @click="switchAdminView(view.key)"
+        >
+          {{ view.label }}
+        </button>
+      </div>
 
       <div class="admin-metrics">
         <el-card shadow="never">
@@ -209,9 +315,13 @@ onMounted(loadLeads);
           <span>高意向</span>
           <strong>{{ highIntentCount }}</strong>
         </el-card>
+        <el-card shadow="never">
+          <span>已存话术</span>
+          <strong>{{ aiScripts.length }}</strong>
+        </el-card>
       </div>
 
-      <el-card shadow="never">
+      <el-card v-if="activeAdminView === 'leads'" shadow="never">
         <div class="status-filter">
           <button
             v-for="status in followStatusFilters"
@@ -246,8 +356,59 @@ onMounted(loadLeads);
               </el-select>
             </template>
           </el-table-column>
+          <el-table-column label="AI 话术" width="120" fixed="right">
+            <template #default="{ row }">
+              <el-button size="small" type="primary" plain @click="openAiScriptDialog(row)">
+                查看/生成
+              </el-button>
+            </template>
+          </el-table-column>
         </el-table>
       </el-card>
+
+      <el-card v-else shadow="never">
+        <el-table :data="aiScripts" stripe border v-loading="isLoadingAiScripts" empty-text="暂无 AI 话术">
+          <el-table-column prop="id" label="ID" width="80" />
+          <el-table-column prop="leadId" label="线索 ID" width="100" />
+          <el-table-column prop="serviceName" label="店铺/服务类型" min-width="140" />
+          <el-table-column prop="model" label="模型" width="120" />
+          <el-table-column prop="updatedAt" label="更新时间" min-width="170" />
+          <el-table-column label="话术预览" min-width="320">
+            <template #default="{ row }">
+              <span class="script-preview">{{ row.content }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="190" fixed="right">
+            <template #default="{ row }">
+              <div class="script-actions">
+                <el-button size="small" type="primary" plain @click="openSavedAiScriptDialog(row)">
+                  查看
+                </el-button>
+                <el-button
+                  size="small"
+                  type="warning"
+                  plain
+                  :loading="regeneratingScriptId === row.id"
+                  @click="regenerateSavedAiScript(row)"
+                >
+                  重新生成
+                </el-button>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-card>
+
+      <el-dialog
+        v-model="aiDialogVisible"
+        :title="aiDialogLead ? `AI 跟进话术：${aiDialogLead.serviceName}` : 'AI 跟进话术'"
+        width="680px"
+      >
+        <div v-if="isGeneratingAiScript" class="ai-script-loading">正在读取或生成话术...</div>
+        <div v-else class="ai-script-result">
+          <pre>{{ aiScriptContent }}</pre>
+        </div>
+      </el-dialog>
     </section>
   </main>
 </template>

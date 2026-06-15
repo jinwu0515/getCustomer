@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>前端展示页优化方向</title>
+    <style>
+      :root {
+        --ink: #182126;
+        --muted: #607079;
+        --line: #dce6e2;
+        --green: #126457;
+        --green-dark: #0b3f39;
+        --coral: #d86c57;
+        --paper: #f7f4ef;
+        --blue: #315f83;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: linear-gradient(135deg, #fbf7f0 0%, #eef7f4 54%, #f8f1ea 100%);
+        color: var(--ink);
+        font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+        line-height: 1.55;
+      }
+
+      main {
+        width: min(1240px, calc(100% - 36px));
+        margin: 0 auto;
+        padding: 28px 0 64px;
+      }
+
+      header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 24px;
+        align-items: end;
+        margin-bottom: 22px;
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--coral);
+        font-size: 14px;
+        font-weight: 850;
+      }
+
+      h1 {
+        max-width: 860px;
+        margin: 0 0 12px;
+        font-size: clamp(34px, 5vw, 58px);
+        line-height: 1.08;
+        letter-spacing: 0;
+      }
+
+      .lead {
+        max-width: 760px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 18px;
+      }
+
+      .jump-nav {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .jump-nav a {
+        min-height: 38px;
+        display: inline-flex;
+        align-items: center;
+        padding: 0 12px;
+        border: 1px solid rgba(18, 100, 87, 0.18);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--green-dark);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 850;
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin-bottom: 26px;
+      }
+
+      .summary-card {
+        min-height: 132px;
+        padding: 18px;
+        border: 1px solid rgba(18, 100, 87, 0.16);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.82);
+        color: inherit;
+        text-decoration: none;
+        box-shadow: 0 12px 28px rgba(24, 33, 38, 0.07);
+      }
+
+      .summary-card strong {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--green-dark);
+        font-size: 20px;
+      }
+
+      .summary-card span {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .options {
+        display: grid;
+        gap: 22px;
+        margin-top: 32px;
+      }
+
+      .option {
+        min-height: auto;
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+        border: 1px solid rgba(18, 100, 87, 0.15);
+        border-radius: 8px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.82);
+        box-shadow: 0 20px 48px rgba(24, 33, 38, 0.09);
+      }
+
+      .preview {
+        min-height: 340px;
+        padding: 18px;
+        background: #ffffff;
+        border-right: 1px solid var(--line);
+      }
+
+      .browser-bar {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        height: 30px;
+        padding: 0 10px;
+        border-radius: 8px 8px 0 0;
+        background: #e9efec;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #9cadb2;
+      }
+
+      .screen {
+        min-height: 320px;
+        border: 1px solid #d9e4df;
+        border-top: 0;
+        border-radius: 0 0 8px 8px;
+        padding: 18px;
+      }
+
+      .nav {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 18px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 26px;
+        padding: 0 9px;
+        border-radius: 999px;
+        background: rgba(18, 100, 87, 0.1);
+        color: var(--green-dark);
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: 1.12fr 0.88fr;
+        gap: 16px;
+        align-items: center;
+      }
+
+      .mini-title {
+        margin: 10px 0;
+        font-size: 24px;
+        line-height: 1.12;
+      }
+
+      .mini-copy {
+        margin: 0 0 14px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        padding: 0 14px;
+        border-radius: 8px;
+        background: var(--green);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 850;
+      }
+
+      .panel,
+      .placeholder {
+        border: 1px solid #dce6e2;
+        border-radius: 8px;
+        background: #f7fbf9;
+      }
+
+      .panel {
+        padding: 14px;
+      }
+
+      .metric {
+        color: var(--green);
+        font-size: 26px;
+        font-weight: 900;
+      }
+
+      .stack {
+        display: grid;
+        gap: 10px;
+      }
+
+      .placeholder {
+        min-height: 44px;
+      }
+
+      .dashboard {
+        display: grid;
+        grid-template-columns: 88px 1fr;
+        gap: 12px;
+      }
+
+      .sidebar {
+        min-height: 258px;
+        padding: 12px;
+        border-radius: 8px;
+        background: #182126;
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 12px;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .beauty-screen {
+        background: linear-gradient(135deg, #fff7f4, #f4fbf8);
+      }
+
+      .beauty-image {
+        min-height: 178px;
+        border-radius: 8px;
+        background:
+          linear-gradient(145deg, rgba(216, 108, 87, 0.18), rgba(18, 100, 87, 0.12)),
+          url("vue/assets/hero-beauty-ai.png") center / cover;
+      }
+
+      .body {
+        padding: 26px;
+        align-self: center;
+      }
+
+      .option h2 {
+        margin: 0 0 8px;
+        font-size: 24px;
+      }
+
+      .option p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .recommend {
+        margin-bottom: 24px;
+        padding: 22px;
+        border: 1px solid rgba(18, 100, 87, 0.2);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.78);
+      }
+
+      .recommend strong {
+        color: var(--green-dark);
+      }
+
+      @media (max-width: 980px) {
+        header,
+        .summary,
+        .options {
+          grid-template-columns: 1fr;
+        }
+
+        .jump-nav {
+          justify-content: flex-start;
+        }
+
+        .option {
+          grid-template-columns: 1fr;
+        }
+
+        .preview {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <p class="eyebrow">Design Direction</p>
+          <h1>前端展示页优化方向</h1>
+          <p class="lead">先看三种方向的总览，再往下滚动看每个方向的大预览。选 A/B/C 后，我会按你选的方向重做前端展示页。</p>
+        </div>
+        <nav class="jump-nav" aria-label="页面内跳转">
+          <a href="#a">看 A</a>
+          <a href="#b">看 B</a>
+          <a href="#c">看 C</a>
+        </nav>
+      </header>
+
+      <section class="summary" aria-label="三种设计方向总览">
+        <a class="summary-card" href="#a">
+          <strong>A. 成交型销售页</strong>
+          <span>更适合拿给商家演示，强调痛点、结果、报价工具和收定金。</span>
+        </a>
+        <a class="summary-card" href="#b">
+          <strong>B. 工具控制台感</strong>
+          <span>更像 SaaS 产品，强调线索管理、数据闭环和系统能力。</span>
+        </a>
+        <a class="summary-card" href="#c">
+          <strong>C. 高端美业品牌感</strong>
+          <span>更偏品牌官网，强调审美、信任、案例和服务质感。</span>
+        </a>
+      </section>
+
+      <section class="recommend">
+        <strong>我的建议：选 A 成交型销售页。</strong>
+        这个项目的核心价值是让商家现场看懂“咨询 - 留资 - 报价 - 跟进”的闭环，A 最贴近接单和演示场景。
+      </section>
+
+      <section class="options" aria-label="设计方向选项">
+        <article class="option" id="a">
+          <div class="preview">
+            <div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+            <div class="screen">
+              <div class="nav"><strong>AI 获客系统</strong><span>套餐 / 报价工具 / 交付</span></div>
+              <div class="hero-grid">
+                <div>
+                  <span class="pill">AI 获客落地页 + 报价助手</span>
+                  <h3 class="mini-title">让门店咨询变成可跟进线索</h3>
+                  <p class="mini-copy">首屏直接讲清结果：客户扫码留资，系统生成报价建议和跟进话术。</p>
+                  <span class="button">现场演示报价工具</span>
+                </div>
+                <div class="panel stack">
+                  <span class="pill">高意向</span>
+                  <span class="metric">86 分</span>
+                  <div class="placeholder"></div>
+                  <div class="placeholder"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="body">
+            <h2>A. 成交型销售页</h2>
+            <p>最适合拿给商家看。重点是首屏说服、套餐锚点、报价工具和交付节奏，帮助你更快收定金。</p>
+          </div>
+        </article>
+
+        <article class="option" id="b">
+          <div class="preview">
+            <div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+            <div class="screen">
+              <div class="nav"><strong>AI Console</strong><span>线索 / 报价 / 跟进</span></div>
+              <div class="dashboard">
+                <div class="sidebar">转化流程<br /><br />报价规则<br /><br />线索分层</div>
+                <div class="stack">
+                  <div class="metrics">
+                    <div class="panel"><span class="metric">124</span></div>
+                    <div class="panel"><span class="metric">38</span></div>
+                    <div class="panel"><span class="metric">41%</span></div>
+                  </div>
+                  <div class="panel stack" style="min-height: 176px;">
+                    <div class="placeholder"></div>
+                    <div class="placeholder"></div>
+                    <div class="placeholder"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="body">
+            <h2>B. 工具控制台感</h2>
+            <p>更像一个 SaaS 产品演示。强调“系统能力”和数据闭环，适合想显得更专业、更可扩展。</p>
+          </div>
+        </article>
+
+        <article class="option" id="c">
+          <div class="preview">
+            <div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+            <div class="screen beauty-screen">
+              <div class="nav"><strong>Beauty Growth</strong><span>方案 / 案例 / 咨询</span></div>
+              <div class="hero-grid">
+                <div class="beauty-image"></div>
+                <div>
+                  <span class="pill">给美业门店的转化方案</span>
+                  <h3 class="mini-title">更有审美的获客体验</h3>
+                  <p class="mini-copy">弱化工具感，强化门店质感、信任、案例和服务包装。</p>
+                  <span class="button">查看方案</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="body">
+            <h2>C. 高端美业品牌感</h2>
+            <p>更偏品牌官网和服务包装。适合做高级感，但转化工具的“现场演示冲击力”会弱一些。</p>
+          </div>
+        </article>
+      </section>
+
+    </main>
+  </body>
+</html>

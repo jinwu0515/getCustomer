@@ -23,6 +23,6 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(adminAuthInterceptor)
-                .addPathPatterns("/api/leads", "/api/leads/*/follow-status");
+                .addPathPatterns("/api/leads", "/api/leads/*/follow-status", "/api/ai/**");
     }
 }

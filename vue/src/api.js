@@ -142,9 +142,34 @@ export function fetchLeads() {
   return request("/api/leads", withAdminAuth());
 }
 
+export function fetchAiFollowUpScripts() {
+  return request("/api/ai/follow-up-scripts", withAdminAuth());
+}
+
+export function regenerateAiFollowUpScript(id) {
+  return request(`/api/ai/follow-up-scripts/${id}/regenerate`, withAdminAuth({
+    method: "POST",
+  }));
+}
+
 export function updateLeadFollowStatus(id, followStatus) {
   return request(`/api/leads/${id}/follow-status`, withAdminAuth({
     method: "PATCH",
     body: JSON.stringify({ followStatus }),
+  }));
+}
+
+export function generateFollowUpScript(lead) {
+  return request("/api/ai/follow-up-script", withAdminAuth({
+    method: "POST",
+    body: JSON.stringify({
+      leadId: lead.id,
+      serviceName: lead.serviceName,
+      budgetRange: lead.budgetRange,
+      urgency: lead.urgency,
+      customerType: lead.customerType,
+      sourceChannel: lead.sourceChannel,
+      intentLevel: lead.intentLevel,
+    }),
   }));
 }

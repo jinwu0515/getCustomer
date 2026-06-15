@@ -101,10 +101,10 @@ async function generatePlan() {
 
   <template v-else>
   <header class="topbar">
-    <a class="brand" href="#top" aria-label="悦颜获客助手首页">
+    <a class="brand" href="#top" aria-label="萤火获客系统首页">
       <span class="brand-mark">AI</span>
       <span>
-        <strong>悦颜获客助手</strong>
+        <strong>萤火获客系统</strong>
         <small>美业门店转化工具</small>
       </span>
     </a>
